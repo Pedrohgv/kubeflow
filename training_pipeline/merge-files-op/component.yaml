@@ -1,0 +1,18 @@
+name: Merge Files OP
+description: Takes all nested files (by 1 level) from input folder and moves them to one single output folder.
+
+inputs:
+  - {name: Nested Folder, type: Directory, description: Folder containing images and annotations on separate folders}
+
+outputs:
+  - {name: Merged Folder, type: Directory, description: Folder containing images and annotations all in the same folder}
+
+implementation:
+  container:
+    image: pedrohgv/merge-files-op:latest
+
+    command: [
+      python, ./src/merge_files.py,
+      --nested_folder, {inputPath: Nested Folder},
+      --merged_folder, {outputPath: Merged Folder}
+    ]

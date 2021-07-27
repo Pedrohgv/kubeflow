@@ -1,0 +1,14 @@
+name: Check Previous Output
+description: Checks what's inside output folder from previous OP.
+
+inputs:
+  - {name: Previous Output Folder, type: Directory, description: Output folder of previous OP}
+
+
+implementation:
+  container:
+    image: alpine
+
+    command: [
+      ls, {inputPath: Previous Output Folder}
+    ]

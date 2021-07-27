@@ -1,1 +1,0 @@
-This Kubeflow op transforms annotations from the Pascal format to the yolo format.

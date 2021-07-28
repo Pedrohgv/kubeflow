@@ -1,0 +1,20 @@
+name: Convert Tiny-Darknet to Tensorflow Op
+description: Converts a model from the Darknet to Tensorflow framework. Also outputs a copy of the config folder provided by the input model.
+
+inputs:
+  - {name: Darknet Model, type: Directory, description: 'Input path that contains a darknet-tiny.weights file and a config folder, which contains a obj.names file'}
+  - {name: Score Threshold, type: Float, default: '0.2',  description: 'The score threshold to hold '}
+outputs:
+  - {name: TF Folder, type: Directory, description: 'Output path that will contain the converted TF model files, as well as a copy of the config folder provided by the input'}
+
+implementation:
+  container:
+    # The strict name of a container image that you've pushed to a container registry.
+    image: pedrohgv/convert-tiny-darknet-2-tf-op:latest
+
+    command: [python3, ./src/save_model.py,
+      --input, {inputPath: Darknet Model}, 
+      --output, {outputPath: TF Folder},
+      --score_thres, {inputValue: Score Threshold}
+    ]
+

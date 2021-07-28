@@ -1,0 +1,1 @@
+This Kubeflow op moves all nested files (up to 1 level) on an inputa folder to the same output folder.

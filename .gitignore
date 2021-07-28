@@ -1,0 +1,9 @@
+models/*
+
+convert-tiny-darknet-2-tf-op/darknet_model/*
+
+convert-tiny-darknet-2-tf-op/tf_model/*
+
+convert-tiny-darknet-2-tf-op/src/core/__pycache__/
+
+

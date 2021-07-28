@@ -1,0 +1,21 @@
+name: Convert Annotations from Pascal to Yolo
+description: Given a folder containing images and Pascal annotations for those images, copies images and converts annotations to Yolo format to specified new folder.
+
+inputs:
+  - {name: Pascal Folder, type: Directory, description: 'Input path that contains both images and annotations in the Pascal format.'}
+  - {name: Classes, type: list, description: 'Classes to convert to Yolo format. Only specified classes will be kept in the converted Yolo format.'}
+
+outputs:
+  - {name: Yolo Folder, type: Directory, description: 'Output path to save both images and Yolo converted annotations.'}
+
+implementation:
+  container:
+    # The strict name of a container image that you've pushed to a container registry.
+    image: pedrohgv/convert-pascal-2-yolo-op:latest
+
+    command: [python3, ./src/convert_pascal_2_yolo.py,
+      --pascal_folder, {inputPath: Pascal Folder}, 
+      --yolo_folder, {outputPath: Yolo Folder},
+      --classes, {inputValue: Classes}
+    ]
+

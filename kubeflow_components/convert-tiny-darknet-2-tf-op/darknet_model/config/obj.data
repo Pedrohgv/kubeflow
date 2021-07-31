@@ -1,5 +1,0 @@
-classes=1
-train=/config/train.txt
-valid=/config/test.txt
-names=helmet_detector/config/obj.names
-backup=/content/gdrive/MyDrive/yolo_training/backup

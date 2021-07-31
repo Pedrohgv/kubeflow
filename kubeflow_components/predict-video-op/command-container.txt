@@ -1,0 +1,1 @@
+python /mount/src/detect_video.py --weights /mount/tf_model --tiny 1 --video /mount/predict-video-op/input_video/input.mp4 --output /mount/output_video/output.avi --dont_show 1

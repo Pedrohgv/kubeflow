@@ -1,9 +1,15 @@
 models/*
 
-convert-tiny-darknet-2-tf-op/darknet_model/*
+*.mp4
 
-convert-tiny-darknet-2-tf-op/tf_model/*
+*.weights
 
-convert-tiny-darknet-2-tf-op/src/core/__pycache__/
+kubeflow_components/convert-tiny-darknet-2-tf-op/darknet_model/*
 
+kubeflow_components/convert-tiny-darknet-2-tf-op/tf_model/*
 
+kubeflow_components/predict-video-op/input_videos/*
+
+kubeflow_components/predict-video-op/output_videos/*
+
+kubeflow_components/predict-video-op/tf_models/*

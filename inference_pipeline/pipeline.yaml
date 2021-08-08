@@ -1,34 +1,15 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
-  generateName: inference-pipeline-
-  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.6.6, pipelines.kubeflow.org/pipeline_compilation_time: '2021-07-30T16:09:15.854497',
+  generateName: metadata-inference-pipeline-
+  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.6.6, pipelines.kubeflow.org/pipeline_compilation_time: '2021-08-07T21:46:54.070685',
     pipelines.kubeflow.org/pipeline_spec: '{"inputs": [{"name": "tf_model_gd_id"},
-      {"name": "inputs_gd_id"}], "name": "inference_pipeline"}'}
+      {"name": "inputs_gd_id"}, {"name": "batch_size"}, {"name": "score"}], "name":
+      "metadata_inference_pipeline"}'}
   labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.6.6}
 spec:
-  entrypoint: inference-pipeline
+  entrypoint: metadata-inference-pipeline
   templates:
-  - name: check-previous-output
-    container:
-      args: []
-      command: [ls, /tmp/inputs/Previous_Output_Folder/data]
-      image: alpine
-    inputs:
-      artifacts:
-      - {name: predict-video-op-Ouput-Videos, path: /tmp/inputs/Previous_Output_Folder/data}
-    metadata:
-      labels:
-        pipelines.kubeflow.org/kfp_sdk_version: 1.6.6
-        pipelines.kubeflow.org/pipeline-sdk-type: kfp
-        pipelines.kubeflow.org/enable_caching: "true"
-      annotations: {pipelines.kubeflow.org/component_spec: '{"description": "Checks
-          what''s inside output folder from previous OP.", "implementation": {"container":
-          {"command": ["ls", {"inputPath": "Previous Output Folder"}], "image": "alpine"}},
-          "inputs": [{"description": "Output folder of previous OP", "name": "Previous
-          Output Folder", "type": "Directory"}], "name": "Check Previous Output"}',
-        pipelines.kubeflow.org/component_ref: '{"digest": "87d526b600b14de4007ce57c94a17968fbba0dccfff4f5f6e6e09609bcc3bc5e",
-          "url": "./check_pipeline_output_op.yaml"}'}
   - name: download-and-extract-op
     container:
       args: []
@@ -87,19 +68,15 @@ spec:
           "e38c8ba85f408bbb799291ec94fc1cd9efc85232f4c86c4a904ac542c45cd368", "url":
           "./download_and_extract_google_drive_op.yaml"}', pipelines.kubeflow.org/arguments.parameters: '{"Google
           Drive ID": "{{inputs.parameters.inputs_gd_id}}"}'}
-  - name: inference-pipeline
+  - name: metadata-inference-pipeline
     inputs:
       parameters:
+      - {name: batch_size}
       - {name: inputs_gd_id}
+      - {name: score}
       - {name: tf_model_gd_id}
     dag:
       tasks:
-      - name: check-previous-output
-        template: check-previous-output
-        dependencies: [predict-video-op]
-        arguments:
-          artifacts:
-          - {name: predict-video-op-Ouput-Videos, from: '{{tasks.predict-video-op.outputs.artifacts.predict-video-op-Ouput-Videos}}'}
       - name: download-and-extract-op
         template: download-and-extract-op
         arguments:
@@ -110,46 +87,56 @@ spec:
         arguments:
           parameters:
           - {name: inputs_gd_id, value: '{{inputs.parameters.inputs_gd_id}}'}
-      - name: predict-video-op
-        template: predict-video-op
+      - name: predict-video-metadata-op
+        template: predict-video-metadata-op
         dependencies: [download-and-extract-op, download-and-extract-op-2]
         arguments:
+          parameters:
+          - {name: batch_size, value: '{{inputs.parameters.batch_size}}'}
+          - {name: score, value: '{{inputs.parameters.score}}'}
           artifacts:
           - {name: download-and-extract-op-2-Extracted-Dataset, from: '{{tasks.download-and-extract-op-2.outputs.artifacts.download-and-extract-op-2-Extracted-Dataset}}'}
           - {name: download-and-extract-op-Extracted-Dataset, from: '{{tasks.download-and-extract-op.outputs.artifacts.download-and-extract-op-Extracted-Dataset}}'}
-  - name: predict-video-op
+  - name: predict-video-metadata-op
     container:
       args: []
       command: [python3, ./src/detect_video.py, --tf_model, /tmp/inputs/Tensorflow_Model/data,
-        --inputs, /tmp/inputs/Input_Videos/data, --outputs, /tmp/outputs/Ouput_Videos/data]
-      image: pedrohgv/predict-video-op:latest
+        --inputs, /tmp/inputs/Input_Videos/data, --batch_size, '{{inputs.parameters.batch_size}}',
+        --score, '{{inputs.parameters.score}}']
+      image: pedrohgv/predict-metadata-op:latest
     inputs:
+      parameters:
+      - {name: batch_size}
+      - {name: score}
       artifacts:
       - {name: download-and-extract-op-2-Extracted-Dataset, path: /tmp/inputs/Input_Videos/data}
       - {name: download-and-extract-op-Extracted-Dataset, path: /tmp/inputs/Tensorflow_Model/data}
-    outputs:
-      artifacts:
-      - {name: predict-video-op-Ouput-Videos, path: /tmp/outputs/Ouput_Videos/data}
     metadata:
       labels:
         pipelines.kubeflow.org/kfp_sdk_version: 1.6.6
         pipelines.kubeflow.org/pipeline-sdk-type: kfp
         pipelines.kubeflow.org/enable_caching: "true"
       annotations: {pipelines.kubeflow.org/component_spec: '{"description": "Performs
-          an object detection task on videos.", "implementation": {"container": {"command":
-          ["python3", "./src/detect_video.py", "--tf_model", {"inputPath": "Tensorflow
-          Model"}, "--inputs", {"inputPath": "Input Videos"}, "--outputs", {"outputPath":
-          "Ouput Videos"}], "image": "pedrohgv/predict-video-op:latest"}}, "inputs":
-          [{"description": "Input path that contains Tensorflow model files and a
-          config folder, which contains a obj.names file", "name": "Tensorflow Model",
-          "type": "Directory"}, {"description": "Folder containing videos to run the
-          object detection task on.", "name": "Input Videos", "type": "Directory"}],
-          "name": "Predict Video Op", "outputs": [{"description": "Output path that
-          will contain the output videos", "name": "Ouput Videos", "type": "Directory"}]}',
-        pipelines.kubeflow.org/component_ref: '{"digest": "086d10c2407beef3328a49a611e0196bb92a3b30e89bf19f3652ed8276157739",
-          "url": "./predict_video_op.yaml"}'}
+          an object detection task on videos and outputs metadata.", "implementation":
+          {"container": {"command": ["python3", "./src/detect_video.py", "--tf_model",
+          {"inputPath": "Tensorflow Model"}, "--inputs", {"inputPath": "Input Videos"},
+          "--batch_size", {"inputValue": "Batch Size"}, "--score", {"inputValue":
+          "Score"}], "image": "pedrohgv/predict-metadata-op:latest"}}, "inputs": [{"description":
+          "Input path that contains Tensorflow model files and a config folder, which
+          contains a obj.names file", "name": "Tensorflow Model", "type": "Directory"},
+          {"description": "Folder containing videos to run the object detection task
+          on.", "name": "Input Videos", "type": "Directory"}, {"default": "32", "description":
+          "Batch size of frames to be loaded at each pass for through the model.",
+          "name": "Batch Size", "type": "Integer"}, {"default": "0.7", "description":
+          "Minimum score to be considered a valid detection.", "name": "Score", "type":
+          "Float"}], "name": "Predict Video Metadata Op"}', pipelines.kubeflow.org/component_ref: '{"digest":
+          "637233c3bf8216d83c7c9a412ce81b859e60c33ea98b0914a1ff2372ed2b036e", "url":
+          "./predict_metadata_op.yaml"}', pipelines.kubeflow.org/arguments.parameters: '{"Batch
+          Size": "{{inputs.parameters.batch_size}}", "Score": "{{inputs.parameters.score}}"}'}
   arguments:
     parameters:
     - {name: tf_model_gd_id}
     - {name: inputs_gd_id}
+    - {name: batch_size}
+    - {name: score}
   serviceAccountName: pipeline-runner

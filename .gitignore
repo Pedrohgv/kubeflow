@@ -12,4 +12,14 @@ kubeflow_components/predict-video-op/input_videos/*
 
 kubeflow_components/predict-video-op/output_videos/*
 
-kubeflow_components/predict-video-op/tf_models/*
+kubeflow_components/predict-video-op/tf_model/*
+
+kubeflow_components/predict-metadata-op/input_videos/*
+
+kubeflow_components/predict-metadata-op/output_videos/*
+
+kubeflow_components/predict-metadata-op/tf_model/*
+
+**/venv-linux
+
+**/venv-windows

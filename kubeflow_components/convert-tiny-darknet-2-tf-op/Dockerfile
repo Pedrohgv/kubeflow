@@ -1,4 +1,4 @@
-FROM tensorflow/tensorflow:2.4.2-gpu
+FROM tensorflow/tensorflow:2.3.0rc0-gpu
 
 COPY ./src /src
 

@@ -1,4 +1,3 @@
-
 from absl import app, flags, logging
 from absl.flags import FLAGS
 
@@ -87,6 +86,7 @@ def main(_argv):
     else:
         saved_model_loaded = tf.saved_model.load(FLAGS.tf_model, tags=[tag_constants.SERVING])
         infer = saved_model_loaded.signatures['serving_default']    
+        
 
     videos = os.listdir(FLAGS.inputs)
 
@@ -94,18 +94,7 @@ def main(_argv):
 
         video_path = FLAGS.inputs + '/' + video
         output_path = FLAGS.outputs + '/' + 'detected_' + video
-
-        if FLAGS.framework == 'tflite':
-            interpreter = tf.lite.Interpreter(model_path=FLAGS.tf_model)
-            interpreter.allocate_tensors()
-            input_details = interpreter.get_input_details()
-            output_details = interpreter.get_output_details()
-            print(input_details)
-            print(output_details)
-        else:
-            saved_model_loaded = tf.saved_model.load(FLAGS.tf_model, tags=[tag_constants.SERVING])
-            infer = saved_model_loaded.signatures['serving_default']
-
+        
         # begin video capture
         try:
             vid = cv2.VideoCapture(int(video_path))
@@ -156,7 +145,8 @@ def main(_argv):
                 for key, value in pred_bbox.items():
                     boxes = value[:, :, 0:4]
                     pred_conf = value[:, :, 4:]
-
+                #boxes = pred_bbox[:, :, 0:4]
+                #pred_conf = pred_bbox[:, :, 4:]
             boxes, scores, classes, valid_detections = tf.image.combined_non_max_suppression(
                 boxes=tf.reshape(boxes, (tf.shape(boxes)[0], -1, 1, 4)),
                 scores=tf.reshape(
@@ -174,10 +164,6 @@ def main(_argv):
             result = np.asarray(image)
             #cv2.namedWindow("result", cv2.WINDOW_AUTOSIZE)  # this should be commented out when running on container
             result = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-            '''
-            if not FLAGS.dont_show:
-                cv2.imshow("result", result)
-            '''
             if FLAGS.outputs:
                 out.write(result)
             if cv2.waitKey(1) & 0xFF == ord('q'): break

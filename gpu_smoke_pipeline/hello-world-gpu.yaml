@@ -1,0 +1,10 @@
+name: Hello World GPU
+description: Prints if GPU is available
+
+implementation:
+  container:
+    image: tensorflow/tensorflow:2.4.2-gpu
+
+    command: [
+      sh, -c, nvidia-smi
+    ]

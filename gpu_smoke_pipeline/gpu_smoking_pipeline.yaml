@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: gpu-smoke-check-
+  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.6.6, pipelines.kubeflow.org/pipeline_compilation_time: '2021-08-01T07:39:22.929318',
+    pipelines.kubeflow.org/pipeline_spec: '{"description": "smoke check as to whether
+      GPU env is ready.", "name": "GPU smoke check"}'}
+  labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.6.6}
+spec:
+  entrypoint: gpu-smoke-check
+  templates:
+  - name: check
+    container:
+      args: [nvidia-smi]
+      command: [sh, -c]
+      image: tensorflow/tensorflow:2.4.2-gpu
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.6.6
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+  - name: gpu-smoke-check
+    dag:
+      tasks:
+      - {name: check, template: check}
+  arguments:
+    parameters: []
+  serviceAccountName: pipeline-runner

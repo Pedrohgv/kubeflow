@@ -1,0 +1,121 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: convert-tiny-darknet-2-tf-pl-
+  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.6.6, pipelines.kubeflow.org/pipeline_compilation_time: '2021-07-31T13:31:39.185026',
+    pipelines.kubeflow.org/pipeline_spec: '{"inputs": [{"name": "google_drive_id"},
+      {"name": "score_threshold"}], "name": "convert-tiny-darknet-2-tf-pl"}'}
+  labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.6.6}
+spec:
+  entrypoint: convert-tiny-darknet-2-tf-pl
+  templates:
+  - name: check-previous-output
+    container:
+      args: []
+      command: [ls, /tmp/inputs/Previous_Output_Folder/data]
+      image: alpine
+    inputs:
+      artifacts:
+      - {name: convert-tiny-darknet-to-tensorflow-op-TF-Folder, path: /tmp/inputs/Previous_Output_Folder/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.6.6
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"description": "Checks
+          what''s inside output folder from previous OP.", "implementation": {"container":
+          {"command": ["ls", {"inputPath": "Previous Output Folder"}], "image": "alpine"}},
+          "inputs": [{"description": "Output folder of previous OP", "name": "Previous
+          Output Folder", "type": "Directory"}], "name": "Check Previous Output"}',
+        pipelines.kubeflow.org/component_ref: '{"digest": "87d526b600b14de4007ce57c94a17968fbba0dccfff4f5f6e6e09609bcc3bc5e",
+          "url": "./check_pipeline_output_op.yaml"}'}
+  - name: convert-tiny-darknet-2-tf-pl
+    inputs:
+      parameters:
+      - {name: google_drive_id}
+    dag:
+      tasks:
+      - name: check-previous-output
+        template: check-previous-output
+        dependencies: [convert-tiny-darknet-to-tensorflow-op]
+        arguments:
+          artifacts:
+          - {name: convert-tiny-darknet-to-tensorflow-op-TF-Folder, from: '{{tasks.convert-tiny-darknet-to-tensorflow-op.outputs.artifacts.convert-tiny-darknet-to-tensorflow-op-TF-Folder}}'}
+      - name: convert-tiny-darknet-to-tensorflow-op
+        template: convert-tiny-darknet-to-tensorflow-op
+        dependencies: [download-and-extract-op]
+        arguments:
+          artifacts:
+          - {name: download-and-extract-op-Extracted-Dataset, from: '{{tasks.download-and-extract-op.outputs.artifacts.download-and-extract-op-Extracted-Dataset}}'}
+      - name: download-and-extract-op
+        template: download-and-extract-op
+        arguments:
+          parameters:
+          - {name: google_drive_id, value: '{{inputs.parameters.google_drive_id}}'}
+  - name: convert-tiny-darknet-to-tensorflow-op
+    container:
+      args: []
+      command: [python3, ./src/save_model.py, --input, /tmp/inputs/Darknet_Model/data,
+        --output, /tmp/outputs/TF_Folder/data, --score_thres, '0.2']
+      image: pedrohgv/convert-tiny-darknet-2-tf-op:latest
+    inputs:
+      artifacts:
+      - {name: download-and-extract-op-Extracted-Dataset, path: /tmp/inputs/Darknet_Model/data}
+    outputs:
+      artifacts:
+      - {name: convert-tiny-darknet-to-tensorflow-op-TF-Folder, path: /tmp/outputs/TF_Folder/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.6.6
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"description": "Converts
+          a model from the Darknet to Tensorflow framework. Also outputs a copy of
+          the config folder provided by the input model.", "implementation": {"container":
+          {"command": ["python3", "./src/save_model.py", "--input", {"inputPath":
+          "Darknet Model"}, "--output", {"outputPath": "TF Folder"}, "--score_thres",
+          {"inputValue": "Score Threshold"}], "image": "pedrohgv/convert-tiny-darknet-2-tf-op:latest"}},
+          "inputs": [{"description": "Input path that contains a darknet-tiny.weights
+          file and a config folder, which contains a obj.names file", "name": "Darknet
+          Model", "type": "Directory"}, {"default": "0.2", "description": "The score
+          threshold to hold ", "name": "Score Threshold", "type": "Float"}], "name":
+          "Convert Tiny-Darknet to Tensorflow Op", "outputs": [{"description": "Output
+          path that will contain the converted TF model files, as well as a copy of
+          the config folder provided by the input", "name": "TF Folder", "type": "Directory"}]}',
+        pipelines.kubeflow.org/component_ref: '{"digest": "9c14518021cb44ca5f8b82ed26d4697d8fe8f12d6d66b7cc47ea83afffaab29e",
+          "url": "./convert_tiny_darknet_2_tf_op.yaml"}', pipelines.kubeflow.org/arguments.parameters: '{"Score
+          Threshold": "0.2"}'}
+  - name: download-and-extract-op
+    container:
+      args: []
+      command: [python, ./src/download_zip_file.py, --gd_file_id, '{{inputs.parameters.google_drive_id}}',
+        --extracted_folder, /tmp/outputs/Extracted_Dataset/data]
+      image: pedrohgv/download-and-extract-google-drive-op:latest
+    inputs:
+      parameters:
+      - {name: google_drive_id}
+    outputs:
+      artifacts:
+      - {name: download-and-extract-op-Extracted-Dataset, path: /tmp/outputs/Extracted_Dataset/data}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.6.6
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+      annotations: {pipelines.kubeflow.org/component_spec: '{"description": "Downloads
+          and extracts file from google drive.", "implementation": {"container": {"command":
+          ["python", "./src/download_zip_file.py", "--gd_file_id", {"inputValue":
+          "Google Drive ID"}, "--extracted_folder", {"outputPath": "Extracted Dataset"}],
+          "image": "pedrohgv/download-and-extract-google-drive-op:latest"}}, "inputs":
+          [{"description": "File ID of file in Google Drive", "name": "Google Drive
+          ID", "type": "String"}], "name": "Download and Extract op", "outputs": [{"description":
+          "Folder containing images and annotaions in Pascal format", "name": "Extracted
+          Dataset", "type": "Directory"}]}', pipelines.kubeflow.org/component_ref: '{"digest":
+          "e38c8ba85f408bbb799291ec94fc1cd9efc85232f4c86c4a904ac542c45cd368", "url":
+          "./download_and_extract_google_drive_op.yaml"}', pipelines.kubeflow.org/arguments.parameters: '{"Google
+          Drive ID": "{{inputs.parameters.google_drive_id}}"}'}
+  arguments:
+    parameters:
+    - {name: google_drive_id}
+    - {name: score_threshold}
+  serviceAccountName: pipeline-runner

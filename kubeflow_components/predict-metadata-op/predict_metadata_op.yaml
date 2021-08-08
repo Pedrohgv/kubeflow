@@ -1,0 +1,21 @@
+name: Predict Video Metadata Op
+description: Performs an object detection task on videos and outputs metadata.
+
+inputs:
+  - {name: Tensorflow Model, type: Directory, description: 'Input path that contains Tensorflow model files and a config folder, which contains a obj.names file'}
+  - {name: Input Videos, type: Directory,  description: 'Folder containing videos to run the object detection task on.'}
+  - {name: Batch Size, type: Integer, default: '32', description: 'Batch size of frames to be loaded at each pass for through the model.'}
+  - {name: Score, type: Float, default: '0.7', description: 'Minimum score to be considered a valid detection.'}
+
+implementation:
+  container:
+    # The strict name of a container image that you've pushed to a container registry.
+    image: pedrohgv/predict-metadata-op:latest
+
+    command: [python3, ./src/detect_video.py,
+      --tf_model, {inputPath: Tensorflow Model}, 
+      --inputs, {inputPath: Input Videos},
+      --batch_size, {inputValue: Batch Size},
+      --score, {inputValue: Score}
+    ]
+

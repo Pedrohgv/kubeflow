@@ -1,0 +1,11 @@
+# arguments to be replaced/added in a config.toml.tmpl (create it if not existent from a copy of config.toml) 
+
+# /var/lib/rancher/k3s/agent/etc/containerd/config.toml.tmpl
+
+
+[plugins.cri.containerd.runtimes.runc]
+  runtime_type = "io.containerd.runtime.v1.linux"
+
+  [plugins.linux]
+  runtime = "nvidia-container-runtime"
+

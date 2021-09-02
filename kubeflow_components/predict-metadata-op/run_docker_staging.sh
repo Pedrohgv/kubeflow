@@ -1,4 +1,5 @@
 docker run --rm --runtime=nvidia -it \
+-p 8000:8000 \
 -v $HOME/Desktop/kubeflow/kubeflow_components/predict-metadata-op:/mount \
 -v $HOME/Desktop/kubeflow/kubeflow_components/predict-metadata-op/tf_model:/tf_model  \
 -v $HOME/Desktop/kubeflow/kubeflow_components/predict-metadata-op/input_videos:/input_videos \

@@ -3,19 +3,37 @@ description: Performs an object detection task on videos and outputs metadata.
 
 inputs:
   - {name: Tensorflow Model, type: Directory, description: 'Input path that contains Tensorflow model files and a config folder, which contains a obj.names file'}
-  - {name: Input Videos, type: Directory,  description: 'Folder containing videos to run the object detection task on.'}
-  - {name: Batch Size, type: Integer, default: '32', description: 'Batch size of frames to be loaded at each pass for through the model.'}
-  - {name: Score, type: Float, default: '0.7', description: 'Minimum score to be considered a valid detection.'}
+  - {name: GPU, type: Integer, description: 'Integer representing GPU to be used.'}
+  - {name: Batch Size, type: Integer, description: 'Batch size of frames to be loaded at each pass for through the model.'}
+  - {name: Score, type: Float, description: 'Minimum score to be considered a valid detection.'}
+
+  # variables needed to configure interface with kafka
+  - {name: Bootstrap Servers, type: String, description: Bootstrap server of kafka broker}
+  - {name: Kafka Topic, type: String, description: Topic of kafka broker to listen to}
+  - {name: Kafka Username, type: String, description: Sasl username for kafka}
+  - {name: Kafka Password, type: String, description: Sasl password for kafka}
+
+  # variables needed to configure interface with kerberos vault
+  - {name: Vault API Address, type: String, description: Kerberos API address from which videos will be downloaded from}
+  - {name: Vault Access Key, type: String, description: Kerberos vault access key}
+  - {name: Vault Secret Access Key, type: String, description: Kerberos vault secret access key}
 
 implementation:
   container:
     # The strict name of a container image that you've pushed to a container registry.
     image: pedrohgv/predict-metadata-op:latest
 
-    command: [python3, ./src/detect_video.py,
+    command: [python3, /src/detect_video.py,
       --tf_model, {inputPath: Tensorflow Model}, 
-      --inputs, {inputPath: Input Videos},
+      --gpu, {inputValue: GPU},
       --batch_size, {inputValue: Batch Size},
-      --score, {inputValue: Score}
+      --score, {inputValue: Score},
+      --bootstrap_servers, {inputValue: Bootstrap Servers},
+      --kafka_topic, {inputValue: Kafka Topic},
+      --kafka_username, {inputValue: Kafka Username},
+      --kafka_password, {inputValue: Kafka Password},
+      --vault_api_address, {inputValue: Vault API Address},
+      --vault_access_key, {inputValue: Vault Access Key},
+      --vault_secret_access_key, {inputValue: Vault Secret Access Key}
     ]
 

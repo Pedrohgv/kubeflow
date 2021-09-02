@@ -28,13 +28,3 @@
 
         ```kubectl patch mutatingwebhookconfiguration cache-webhook-${NAMESPACE} --type='json' -p='[{"op":"replace", "path": "/webhooks/0/rules/0/operations/0", "value": "CREATE"}]'```
 
-* If Kafka deployment fails to start and logs show 
-    ```mkdir: cannot create directory '/bitnami/kafka/data': Permission denied```:
-
-    - run:
-    
-        ```helm upgrade kafka bitnami/kafka --set volumePermissions.enabled=true``` 
-
-        and
-    
-        ```helm upgrade kafka bitnami/kafka --set zookeeper.volumePermissions.enabled=true```

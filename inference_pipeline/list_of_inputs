@@ -1,0 +1,15 @@
+tf model: 1nEnvFWipCjIgLE4IIqdqWuR8lg9zh6O2
+
+bootstrap_servers = pkc-ldjyd.southamerica-east1.gcp.confluent.cloud:9092
+
+topic = kubeflow
+
+username = KUYE7CHLZJF6DCC7
+
+password = CCfiCkB2GmLb0ARAavO2X92jNE5FJYX3hhw94VHaajNA0NfJ4J4744fuDywOIBQB
+
+api_address = https://staging.api.vault.kerberos.live/storage/blob
+
+vault_access_key = ABCDEFGHI!@#$%12345
+
+vault_secret_access_key = JKLMNOPQRSTUVWXYZ!@#$%67890

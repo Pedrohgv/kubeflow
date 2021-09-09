@@ -7,6 +7,7 @@ import tensorflow as tf
 import core.utils as utils
 from core.yolov4 import filter_boxes
 from core.vault import CreateQueue, download_video
+from core.metrics import counter, start_prometheus_exposure
 import json
 from tensorflow.python.saved_model import tag_constants
 from PIL import Image
@@ -86,6 +87,12 @@ def main(_argv):
                                     username= FLAGS.kafka_username,
                                     password=FLAGS.kafka_password)
         
+        start_prometheus_exposure(8000)
+
+        detection_counter = counter(
+            name='detection_counter',
+            description='counts number of detections at each batch pass'
+        )
 
         while True:
             
@@ -173,6 +180,11 @@ def main(_argv):
                         isec, fsec = divmod(round(seconds*1000000), 1000000)
                         fsec = fsec/1000000
                         detection_time = datetime.timedelta(seconds=isec)
+
+                        max_detections = valid_detections[max_detections_on_batch_index]
+
+                        detection_counter.set(value=max_detections)
+                        
                         print(
                             '{} objects detected at {}.{:02.0f}'.format(
                                 valid_detections[max_detections_on_batch_index],

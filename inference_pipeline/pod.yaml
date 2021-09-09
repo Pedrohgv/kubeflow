@@ -1,0 +1,83 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: detect-helmet-pod
+  labels:
+    app: detect-helmet-app
+spec:
+  volumes:
+    - name: model-folder
+      emptyDir: {}
+
+  initContainers:
+
+    - name: model-downloader
+      image: pedrohgv/download-and-extract-google-drive-op:latest
+      volumeMounts:
+        - name: model-folder
+          mountPath: /model_folder
+      command: [
+        python, ./src/download_zip_file.py,
+        --gd_file_id, 1nEnvFWipCjIgLE4IIqdqWuR8lg9zh6O2,
+        --extracted_folder, /model_folder
+      ]
+
+  containers:
+
+  - name: helmet-detector
+    image: pedrohgv/predict-metadata-op:latest
+    ports:
+    - containerPort: 8000 # exposes port for prometheus exporter embedded in container
+    volumeMounts:
+    - name: model-folder
+      mountPath: /tf_model
+    command: [
+      python, /src/detect_video.py,
+
+      # detection configuration parameters
+      --tf_model, /tf_model,
+      --score, '0.7',
+      --gpu, '0',
+      --batch_size, '32',
+
+      # kafka broker parameters
+      --bootstrap_servers, "pkc-ldjyd.southamerica-east1.gcp.confluent.cloud:9092",
+      --kafka_topic, "kubeflow",
+      --kafka_username, "KUYE7CHLZJF6DCC7",
+      --kafka_password, "CCfiCkB2GmLb0ARAavO2X92jNE5FJYX3hhw94VHaajNA0NfJ4J4744fuDywOIBQB",
+
+      # kerberos vault parameters
+      --vault_api_address, "https://staging.api.vault.kerberos.live/storage/blob",
+      --vault_access_key, "ABCDEFGHI!@#$%12345",
+      --vault_secret_access_key, "JKLMNOPQRSTUVWXYZ!@#$%67890"
+    ]
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: helmet-detector-service
+  labels:
+    app: detect-helmet-app
+spec:
+  selector:
+    app: detect-helmet-app
+  ports:
+  - name: prometheus
+    protocol: TCP
+    port: 8000 # port to access service
+    targetPort: 8000 # pod port that ingress will forward requests to
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: helmet-detector-servicemonitor
+  labels:
+    release: prometheus # makes sure this service monitor is picked up by prometheus
+spec:
+  selector:
+    matchLabels:
+      app: detect-helmet-app
+  endpoints:
+  - port: prometheus

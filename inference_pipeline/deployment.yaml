@@ -37,7 +37,7 @@ spec:
       containers:
 
         - name: helmet-detector
-          image: pedrohgv/predict-metadata-op:latest
+          image: pedrohgv/detect-video:latest
           imagePullPolicy: "Always"
           ports:
           - containerPort: 8000 # exposes port for prometheus exporter embedded in container

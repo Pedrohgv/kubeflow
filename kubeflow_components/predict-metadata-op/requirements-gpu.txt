@@ -1,9 +1,0 @@
-opencv-python==4.5.3.56
-confluent_kafka==1.7.0
-decord
-lxml
-tqdm
-absl-py
-matplotlib
-easydict
-pillow

@@ -1,5 +1,5 @@
 #!/bin/bash -e
-image_name=pedrohgv/convert-tiny-darknet-2-tf-op
+image_name=pedrohgv/convert-darknet-2-tf-op
 image_tag=latest
 full_image_name=${image_name}:${image_tag}
 

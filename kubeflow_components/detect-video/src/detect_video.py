@@ -1,44 +1,31 @@
 
 from absl import app, flags, logging
 from absl.flags import FLAGS
-
-def change_classes_file(folder='/tf_model'):
-    # changes config.py file to point at the correct location for the obj.names file, which contains the classes names.
-    # has to be here instead of utils.py because utils also use the cfg.YOLO.CLASSES attribute during the import
-
-    pattern = "__C.YOLO.CLASSES"
-
-    file_name = './src/core/config.py'
-
-    # reads the file and stores its contents
-    with open(file_name, 'rt') as cfg_file:
-        data = cfg_file.read()
-
-    # find the line that contains the path to the obj.names
-    with open(file_name, 'rt') as cfg_file:
-        for line in cfg_file:
-            line = line.strip('\r\n')  # it's always a good behave to strip what you read from files
-            if pattern in line:
-                replace_line = line
-                break
-    
-    # replaces the entire line in the previous loaded contents of file
-    data = data.replace(
-        replace_line,
-        "__C.YOLO.CLASSES              = " + "'" + folder  + "/config/obj.names'"
-    )
-
-    # writes to the file
-    with open(file_name, 'wt') as cfg_file:
-        cfg_file.write(data)
+import time
+import datetime
+import tensorflow as tf
+import core.utils as utils
+from core.yolov4 import filter_boxes
+from core.vault import CreateQueue, download_video
+import json
+from tensorflow.python.saved_model import tag_constants
+from PIL import Image
+import cv2
+import decord
+from decord import VideoReader
+from decord import cpu, gpu
+import numpy as np
+import os
+import gc
+from tensorflow.compat.v1 import ConfigProto
+from tensorflow.compat.v1 import InteractiveSession
 
 flags.DEFINE_string('framework', 'tf', '(tf, tflite, trt')
-flags.DEFINE_string('tf_model', './tf_model',
+flags.DEFINE_string('tf_model', '/tf_model',
                     'path to folder containing tensorflow model files and a config folder containing the obj.names file.')
 flags.DEFINE_integer('size', 416, 'resize images to')
-flags.DEFINE_boolean('tiny', True, 'yolo or yolo-tiny')
 flags.DEFINE_string('architecture', 'yolov4', 'yolov3 or yolov4')
-flags.DEFINE_string('inputs', './input_videos', 'path to folder containing videos to be converted')
+flags.DEFINE_string('inputs', '/input_videos', 'path to folder containing videos to be converted')
 flags.DEFINE_float('iou', 0.45, 'iou threshold')
 flags.DEFINE_float('score', 0.7, 'score threshold')
 flags.DEFINE_boolean('dont_show', True, 'dont show video output')
@@ -59,15 +46,6 @@ flags.DEFINE_string('vault_secret_access_key', None, 'kerberos vault secret acce
 
 def main(_argv):
 
-    # changes the config.py file to point at the right file for obj.names, according to the input folder provided in runtime
-    change_classes_file(folder=FLAGS.tf_model)
-
-    # imports must be done inside main function because input flag arguments (and by consequence the folder containing the obj.names file)
-    # are only valid inside main funtion app.
-    import time
-    import datetime
-    import tensorflow as tf
-
     physical_devices = tf.config.experimental.list_physical_devices('GPU')
     if len(physical_devices) > FLAGS.gpu:
         print()
@@ -82,22 +60,6 @@ def main(_argv):
         tf.config.experimental.set_memory_growth(physical_devices[0], True)
     else:
         print('No GPUs found. Running ops on CPU instead.')
-
-    import core.utils as utils
-    from core.yolov4 import filter_boxes
-    from core.vault import CreateQueue, download_video
-    import json
-    from tensorflow.python.saved_model import tag_constants
-    from PIL import Image
-    import cv2
-    import decord
-    from decord import VideoReader
-    from decord import cpu, gpu
-    import numpy as np
-    import os
-    import gc
-    from tensorflow.compat.v1 import ConfigProto
-    from tensorflow.compat.v1 import InteractiveSession
     
     # Lets tensorflow choose another device if the one specified doesn't exist.
     tf.config.set_soft_device_placement(True)
@@ -107,7 +69,6 @@ def main(_argv):
 
         config = ConfigProto()
         session = InteractiveSession(config=config)
-        STRIDES, ANCHORS, NUM_CLASS, XYSCALE = utils.load_config(FLAGS)
         input_size = FLAGS.size
 
         print()

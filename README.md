@@ -1,40 +1,9 @@
-# Kubeflow Kerberos.io
+# Kerberos.io ML Integration
 
-## Structure
+This repository is meant to demonstrate how to set up a Computer Vision application on Kubernetes, making use of Nvidia GPU acceleration for Machine Learning workloads. It integrates with the robust and scalable surveillance solution at [kerberos.io](https://kerberos.io/).
 
-- All Kubeflow components, their source code, `.yaml` and `Dockerfile` files are in the `kubeflow_components` folder.
-- Each pipeline folder only holds the `.yaml` files for each component it needs. The pipelines are built by the `make_pipeline.py` python script.
+## Setup
+In order to run the examples, one needs to have a running Kubernetes cluster, the correct Nvidia Drivers, and the [Nvidia-Container-Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) properly installed. A running instance of Kerberos Vault is also needed.
 
- ## Hints
-
- * Disable/Enable caching for inputs/outputs of runs run previously (described [here](https://www.kubeflow.org/docs/components/pipelines/caching/)):
-    - Disable:
-
-        `export NAMESPACE=kubeflow`
-
-        ( to make sure `mutatingwebhookconfiguration` exists in your cluster):
-
-        `kubectl get mutatingwebhookconfiguration cache-webhook-${NAMESPACE}`
-
-        ```kubectl patch mutatingwebhookconfiguration cache-webhook-${NAMESPACE} --type='json' -p='[{"op":"replace", "path": "/webhooks/0/rules/0/operations/0", "value": "DELETE"}]'```
-
-    - Enable:
-
-        `export NAMESPACE=kubeflow`
-
-        ( to make sure `mutatingwebhookconfiguration` exists in your cluster):
-
-        `kubectl get mutatingwebhookconfiguration cache-webhook-${NAMESPACE}`
-
-        ```kubectl patch mutatingwebhookconfiguration cache-webhook-${NAMESPACE} --type='json' -p='[{"op":"replace", "path": "/webhooks/0/rules/0/operations/0", "value": "CREATE"}]'```
-
-* If Kafka deployment fails to start and logs show 
-    ```mkdir: cannot create directory '/bitnami/kafka/data': Permission denied```:
-
-    - run:
-    
-        ```helm upgrade kafka bitnami/kafka --set volumePermissions.enabled=true``` 
-
-        and
-    
-        ```helm upgrade kafka bitnami/kafka --set zookeeper.volumePermissions.enabled=true```
+## Kubeflow
+Some examples have been built to be run as [Kubeflow](https://www.kubeflow.org/) pipelines. Kubeflow is a tool developed for MLOps and Kubernetes and helps Machine Learning Engineers track their training sessions and experiments with different parameters and inputs.

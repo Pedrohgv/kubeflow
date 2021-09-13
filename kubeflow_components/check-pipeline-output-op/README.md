@@ -1,1 +1,0 @@
-This Kubeflow OP checks what's inside the output of the previous OP and prints it.

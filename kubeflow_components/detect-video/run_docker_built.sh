@@ -1,8 +1,8 @@
 docker run --rm --runtime=nvidia -it \
--v $HOME/Desktop/kubeflow/kubeflow_components/predict-metadata-op/tf_model:/tf_model  \
--v $HOME/Desktop/kubeflow/kubeflow_components/predict-metadata-op/input_videos:/input_videos \
+-v $HOME/Desktop/nvidia-gpu-kubernetes/kubeflow_components/predict-metadata-op/tf_model:/tf_model  \
+-v $HOME/Desktop/nvidia-gpu-kubernetes/kubeflow_components/predict-metadata-op/input_videos:/input_videos \
 \
-pedrohgv/predict-metadata-op:latest python /src/detect_video.py \
+pedrohgv/detect-video:latest python /src/detect_video.py \
 \
 --score 0.7 \
 --gpu 0 \

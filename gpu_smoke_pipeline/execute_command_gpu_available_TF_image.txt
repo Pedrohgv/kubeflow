@@ -1,1 +1,0 @@
-python -c "exec(\"import tensorflow as tf\nprint()\nprint('GPU is available: {}'.format(tf.test.is_gpu_available()))\nprint()\")"

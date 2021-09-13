@@ -4,6 +4,12 @@ models/*
 
 *.weights
 
+*.png
+
+*.txt
+
+*.xml
+
 kubeflow_components/convert-tiny-darknet-2-tf-op/darknet_model/*
 
 kubeflow_components/convert-tiny-darknet-2-tf-op/tf_model/*

@@ -1,6 +1,6 @@
 docker run --rm --runtime=nvidia -it \
--v $HOME/Desktop/nvidia-gpu-kubernetes/kubeflow_components/predict-metadata-op/tf_model:/tf_model  \
--v $HOME/Desktop/nvidia-gpu-kubernetes/kubeflow_components/predict-metadata-op/input_videos:/input_videos \
+-v $HOME/Desktop/nvidia-gpu-kubernetes/kubeflow_components/detect-video/tf_model:/tf_model  \
+-v $HOME/Desktop/nvidia-gpu-kubernetes/kubeflow_components/detect-video/input_videos:/input_videos \
 \
 pedrohgv/detect-video:latest python /src/detect_video.py \
 \
@@ -16,3 +16,5 @@ pedrohgv/detect-video:latest python /src/detect_video.py \
 --vault_api_address "https://staging.api.vault.kerberos.live/storage/blob" \
 --vault_access_key "ABCDEFGHI!@#$%12345" \
 --vault_secret_access_key "JKLMNOPQRSTUVWXYZ!@#$%67890" \
+\
+--detection_counter_name 'detection_counter_GPU_0'

@@ -4,17 +4,18 @@ metadata:
   name: detect-helmet-deployment
   labels:
     app: detect-helmet-app
+    gpu: '0' # each deployment must be deployed on one GPU
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: detect-helmet-app
-
+      gpu: '0' # each deployment must be deployed on one GPU
   template:
     metadata:
       labels:
         app: detect-helmet-app
-
+        gpu: '0' # each deployment must be deployed on one GPU
     spec:
 
       volumes:
@@ -62,7 +63,10 @@ spec:
             # kerberos vault parameters
             --vault_api_address, "https://staging.api.vault.kerberos.live/storage/blob",
             --vault_access_key, "ABCDEFGHI!@#$%12345",
-            --vault_secret_access_key, "JKLMNOPQRSTUVWXYZ!@#$%67890"
+            --vault_secret_access_key, "JKLMNOPQRSTUVWXYZ!@#$%67890",
+
+            # prometheus variable name to export
+            --detection_counter_name, 'detection_counter_GPU_0'
           ]
 
 ---
@@ -75,6 +79,7 @@ metadata:
 spec:
   selector:
     app: detect-helmet-app
+    gpu: '0' # each deployment must be deployed on one GPU
   ports:
   - name: prometheus
     protocol: TCP
@@ -92,5 +97,6 @@ spec:
   selector:
     matchLabels:
       app: detect-helmet-app
+      gpu: '0' # each deployment must be deployed on one GPU
   endpoints:
   - port: prometheus

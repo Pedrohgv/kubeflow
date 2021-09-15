@@ -5,7 +5,6 @@ import time
 import datetime
 import tensorflow as tf
 import core.utils as utils
-from core.yolov4 import filter_boxes
 from core.vault import CreateQueue, download_video
 from core.metrics import counter, start_prometheus_exposure
 import json
@@ -45,19 +44,24 @@ flags.DEFINE_string('vault_api_address', None, 'kerberos API address from which 
 flags.DEFINE_string('vault_access_key', None, 'kerberos vault access key')
 flags.DEFINE_string('vault_secret_access_key', None, 'kerberos vault secret access key')
 
-def main(_argv):
+# variable name to export detection metrics to prometheus
+flags.DEFINE_string('detection_counter_name', None, 'variable name that will be used to export detection counter metric to prometheus')
 
+def main(_argv):
+    
     physical_devices = tf.config.experimental.list_physical_devices('GPU')
     if len(physical_devices) > FLAGS.gpu:
         print()
         print('Using GPU {}'.format(FLAGS.gpu))
         print()
+        tf.config.set_visible_devices(physical_devices[FLAGS.gpu], 'GPU')
         tf.config.experimental.set_memory_growth(physical_devices[FLAGS.gpu], True)
 
     elif len(physical_devices) > 0:
         print()
         print('Specified GPU not found. Running ops on automatically choosen GPU.')
         print()
+        tf.config.set_visible_devices(physical_devices[FLAGS.gpu], 'GPU')
         tf.config.experimental.set_memory_growth(physical_devices[0], True)
     else:
         print('No GPUs found. Running ops on CPU instead.')
@@ -90,7 +94,7 @@ def main(_argv):
         start_prometheus_exposure(8000)
 
         detection_counter = counter(
-            name='detection_counter',
+            name=FLAGS.detection_counter_name,
             description='counts number of detections at each batch pass'
         )
 

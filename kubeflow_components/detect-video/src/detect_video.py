@@ -72,8 +72,6 @@ def main(_argv):
     # Selects specified device.
     with tf.device('/device:GPU:{}'.format(FLAGS.gpu)):
 
-        config = ConfigProto()
-        session = InteractiveSession(config=config)
         input_size = FLAGS.size
 
         print()

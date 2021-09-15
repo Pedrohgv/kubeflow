@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: detect-helmet-deployment
+  name: detect-helmet-deployment-gpu-1
   labels:
     app: detect-helmet-app
     gpu: '1' # each deployment must be deployed on one GPU
@@ -73,7 +73,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: helmet-detector-service
+  name: helmet-detector-service-gpu-1
   labels:
     app: detect-helmet-app
 spec:
@@ -90,7 +90,7 @@ spec:
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: helmet-detector-servicemonitor
+  name: helmet-detector-servicemonitor-gpu-1
   labels:
     release: prometheus # makes sure this service monitor is picked up by prometheus
 spec:

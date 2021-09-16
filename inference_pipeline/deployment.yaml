@@ -1,21 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: detect-helmet-deployment-gpu-1
+  name: detect-helmet-deployment
   labels:
     app: detect-helmet-app
-    gpu: '1' # each deployment must be deployed on one GPU
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: detect-helmet-app
-      gpu: '1' # each deployment must be deployed on one GPU
   template:
     metadata:
       labels:
         app: detect-helmet-app
-        gpu: '1' # each deployment must be deployed on one GPU
     spec:
 
       volumes:
@@ -40,6 +37,9 @@ spec:
         - name: helmet-detector
           image: pedrohgv/detect-video:latest
           imagePullPolicy: "Always"
+          resources:
+            limits:
+              nvidia.com/gpu: 1 # requesting a single GPU
           ports:
           - containerPort: 8000 # exposes port for prometheus exporter embedded in container
           volumeMounts:
@@ -51,7 +51,6 @@ spec:
             # detection configuration parameters
             --tf_model, /tf_model,
             --score, '0.7',
-            --gpu, '1',
             --batch_size, '32',
 
             # kafka broker parameters
@@ -66,20 +65,19 @@ spec:
             --vault_secret_access_key, "JKLMNOPQRSTUVWXYZ!@#$%67890",
 
             # prometheus variable name to export
-            --detection_counter_name, 'detection_counter_GPU_1'
+            --detection_counter_name, 'detection_counter'
           ]
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: helmet-detector-service-gpu-1
+  name: helmet-detector-service
   labels:
     app: detect-helmet-app
 spec:
   selector:
     app: detect-helmet-app
-    gpu: '1' # each deployment must be deployed on one GPU
   ports:
   - name: prometheus
     protocol: TCP
@@ -90,13 +88,12 @@ spec:
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: helmet-detector-servicemonitor-gpu-1
+  name: helmet-detector-servicemonitor
   labels:
     release: prometheus # makes sure this service monitor is picked up by prometheus
 spec:
   selector:
     matchLabels:
       app: detect-helmet-app
-      gpu: '1' # each deployment must be deployed on one GPU
   endpoints:
   - port: prometheus

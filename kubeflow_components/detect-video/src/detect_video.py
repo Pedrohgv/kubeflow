@@ -30,7 +30,6 @@ flags.DEFINE_float('iou', 0.45, 'iou threshold')
 flags.DEFINE_float('score', 0.7, 'score threshold')
 flags.DEFINE_boolean('dont_show', True, 'dont show video output')
 flags.DEFINE_integer('batch_size', 32, 'batch size to be used during prediction')
-flags.DEFINE_integer('gpu', 0, 'integer representing GPU to be used')
 
 
 # variables needed to configure interface with kafka
@@ -50,18 +49,11 @@ flags.DEFINE_string('detection_counter_name', None, 'variable name that will be 
 def main(_argv):
     
     physical_devices = tf.config.experimental.list_physical_devices('GPU')
-    if len(physical_devices) > FLAGS.gpu:
+    
+    if len(physical_devices) >= 1:
         print()
-        print('Using GPU {}'.format(FLAGS.gpu))
+        print('Using GPU')
         print()
-        tf.config.set_visible_devices(physical_devices[FLAGS.gpu], 'GPU')
-        tf.config.experimental.set_memory_growth(physical_devices[FLAGS.gpu], True)
-
-    elif len(physical_devices) > 0:
-        print()
-        print('Specified GPU not found. Running ops on automatically choosen GPU.')
-        print()
-        tf.config.set_visible_devices(physical_devices[FLAGS.gpu], 'GPU')
         tf.config.experimental.set_memory_growth(physical_devices[0], True)
     else:
         print('No GPUs found. Running ops on CPU instead.')
@@ -69,140 +61,137 @@ def main(_argv):
     # Lets tensorflow choose another device if the one specified doesn't exist.
     tf.config.set_soft_device_placement(True)
 
-    # Selects specified device.
-    with tf.device('/device:GPU:{}'.format(FLAGS.gpu)):
+    input_size = FLAGS.size
 
-        input_size = FLAGS.size
+    print()
+    print('Loading model...')
+    saved_model_loaded = tf.saved_model.load(FLAGS.tf_model, tags=[tag_constants.SERVING])
+    infer = saved_model_loaded.signatures['serving_default']
+    print('Model loaded.')
+    print()
 
-        print()
-        print('Loading model...')
-        saved_model_loaded = tf.saved_model.load(FLAGS.tf_model, tags=[tag_constants.SERVING])
-        infer = saved_model_loaded.signatures['serving_default']
-        print('Model loaded.')
-        print()
+    # creates kafka object
+    kafkaQueue = CreateQueue(bootstrap_servers=FLAGS.bootstrap_servers,
+                                topic=FLAGS.kafka_topic,
+                                mechanism='PLAIN',
+                                security='SASL_SSL',
+                                username= FLAGS.kafka_username,
+                                password=FLAGS.kafka_password)
+    
+    start_prometheus_exposure(8000)
 
-        # creates kafka object
-        kafkaQueue = CreateQueue(bootstrap_servers=FLAGS.bootstrap_servers,
-                                    topic=FLAGS.kafka_topic,
-                                    mechanism='PLAIN',
-                                    security='SASL_SSL',
-                                    username= FLAGS.kafka_username,
-                                    password=FLAGS.kafka_password)
+    detection_counter = counter(
+        name=FLAGS.detection_counter_name,
+        description='counts number of detections at each batch pass'
+    )
+
+    while True:
         
-        start_prometheus_exposure(8000)
+        try:
+            print('Listening...')
 
-        detection_counter = counter(
-            name=FLAGS.detection_counter_name,
-            description='counts number of detections at each batch pass'
-        )
+            # gets message from kafka broker
+            messages = kafkaQueue.ReceiveMessages()
+                
+            # iterate through messages
+            for message in messages:
 
-        while True:
-            
-            try:
-                print('Listening...')
+                # starts couting time of download
+                start = time.time()
 
-                # gets message from kafka broker
-                messages = kafkaQueue.ReceiveMessages()
-                    
-                # iterate through messages
-                for message in messages:
+                print('Downloading video...')
+                download_video(
+                    api_address=FLAGS.vault_api_address,
+                    access_key=FLAGS.vault_access_key,
+                    secret_access_key=FLAGS.vault_secret_access_key,
+                    message=message,
+                    video_folder=FLAGS.inputs
+                )
+                # time to download video
+                download_time = time.time() - start
 
-                    # starts couting time of download
-                    start = time.time()
+                video_path = FLAGS.inputs + '/video.mp4'
 
-                    print('Downloading video...')
-                    download_video(
-                        api_address=FLAGS.vault_api_address,
-                        access_key=FLAGS.vault_access_key,
-                        secret_access_key=FLAGS.vault_secret_access_key,
-                        message=message,
-                        video_folder=FLAGS.inputs
+                ##############################################
+                # loads video using decord
+                decr_vid = VideoReader(video_path, ctx=cpu(0), height=input_size, width=input_size)
+                #############################################
+                
+                # capture video with openCv for FPS information
+                try:
+                    vid = cv2.VideoCapture(int(video_path))
+                except:
+                    vid = cv2.VideoCapture(video_path)
+
+                fps = vid.get(cv2.CAP_PROP_FPS)
+                print('Beginning detection on video...')
+
+                # start counting time of detection
+                detection_start = time.time()
+
+                total_frames = len(decr_vid)
+                
+                for i in range(0, total_frames, FLAGS.batch_size):
+
+                    # indexes of frames to get, relative to entire video
+                    indexes = np.arange(
+                        start=i,
+                        stop=min((i+FLAGS.batch_size), total_frames) 
                     )
-                    # time to download video
-                    download_time = time.time() - start
 
-                    video_path = FLAGS.inputs + '/video.mp4'
-
-                    ##############################################
-                    # loads video using decord
-                    decr_vid = VideoReader(video_path, ctx=cpu(0), height=input_size, width=input_size)
-                    #############################################
+                    batch_data_decr = decr_vid.get_batch(indexes).asnumpy() / 255
+                    batch_data_decr = tf.constant(batch_data_decr, dtype=tf.float32)
                     
-                    # capture video with openCv for FPS information
-                    try:
-                        vid = cv2.VideoCapture(int(video_path))
-                    except:
-                        vid = cv2.VideoCapture(video_path)
-
-                    fps = vid.get(cv2.CAP_PROP_FPS)
-                    print('Beginning detection on video...')
-
-                    # start counting time of detection
-                    detection_start = time.time()
-
-                    total_frames = len(decr_vid)
-                    
-                    for i in range(0, total_frames, FLAGS.batch_size):
-
-                        # indexes of frames to get, relative to entire video
-                        indexes = np.arange(
-                            start=i,
-                            stop=min((i+FLAGS.batch_size), total_frames) 
-                        )
-
-                        batch_data_decr = decr_vid.get_batch(indexes).asnumpy() / 255
-                        batch_data_decr = tf.constant(batch_data_decr, dtype=tf.float32)
-                        
-            
-
-                        pred_bbox = infer(batch_data_decr)
-                        
-                        for key, value in pred_bbox.items():
-                            boxes = value[:, :, 0:4]
-                            pred_conf = value[:, :, 4:]
-
-                        boxes, scores, classes, valid_detections = tf.image.combined_non_max_suppression(
-                            boxes=tf.reshape(boxes, (tf.shape(boxes)[0], -1, 1, 4)),
-                            scores=tf.reshape(
-                                pred_conf, (tf.shape(pred_conf)[0], -1, tf.shape(pred_conf)[-1])),
-                            max_output_size_per_class=50,
-                            max_total_size=50,
-                            iou_threshold=FLAGS.iou,
-                            score_threshold=FLAGS.score
-                        )
-
-                        # indexes of max number of detections for this batch
-                        max_detections_on_batch_index = tf.math.argmax(valid_detections, axis=0)
-
-                        # seconds (relative to entire video) of occurence max number of detections for this batch
-                        seconds = tf.cast((i + max_detections_on_batch_index), tf.float32)/fps
-                        seconds=seconds.numpy().item()
-
-                        
-                        isec, fsec = divmod(round(seconds*1000000), 1000000)
-                        fsec = fsec/1000000
-                        detection_time = datetime.timedelta(seconds=isec)
-
-                        max_detections = valid_detections[max_detections_on_batch_index]
-
-                        detection_counter.set(value=max_detections)
-                        
-                        print(
-                            '{} objects detected at {}.{:02.0f}'.format(
-                                max_detections,
-                                detection_time, fsec
-                            )
-                        )
-                    print('Download time: {:.2f}'.format(download_time))
-                    print('Detection time: {:.2f}'.format(time.time() - detection_start))
-                    print('Total time: {:.2f}'.format(time.time() - start))
-                    print()
         
 
-            except Exception as e:
-                print("error..")
-                print(e)
-                pass
+                    pred_bbox = infer(batch_data_decr)
+                    
+                    for key, value in pred_bbox.items():
+                        boxes = value[:, :, 0:4]
+                        pred_conf = value[:, :, 4:]
+
+                    boxes, scores, classes, valid_detections = tf.image.combined_non_max_suppression(
+                        boxes=tf.reshape(boxes, (tf.shape(boxes)[0], -1, 1, 4)),
+                        scores=tf.reshape(
+                            pred_conf, (tf.shape(pred_conf)[0], -1, tf.shape(pred_conf)[-1])),
+                        max_output_size_per_class=50,
+                        max_total_size=50,
+                        iou_threshold=FLAGS.iou,
+                        score_threshold=FLAGS.score
+                    )
+
+                    # indexes of max number of detections for this batch
+                    max_detections_on_batch_index = tf.math.argmax(valid_detections, axis=0)
+
+                    # seconds (relative to entire video) of occurence max number of detections for this batch
+                    seconds = tf.cast((i + max_detections_on_batch_index), tf.float32)/fps
+                    seconds=seconds.numpy().item()
+
+                    
+                    isec, fsec = divmod(round(seconds*1000000), 1000000)
+                    fsec = fsec/1000000
+                    detection_time = datetime.timedelta(seconds=isec)
+
+                    max_detections = valid_detections[max_detections_on_batch_index]
+
+                    detection_counter.set(value=max_detections)
+                    
+                    print(
+                        '{} objects detected at {}.{:02.0f}'.format(
+                            max_detections,
+                            detection_time, fsec
+                        )
+                    )
+                print('Download time: {:.2f}'.format(download_time))
+                print('Detection time: {:.2f}'.format(time.time() - detection_start))
+                print('Total time: {:.2f}'.format(time.time() - start))
+                print()
+    
+
+        except Exception as e:
+            print("error..")
+            print(e)
+            pass
             
 if __name__ == '__main__':
     try:
